@@ -1,0 +1,9 @@
+[Unit]
+Description=container health
+
+[Timer]
+OnUnitActiveSec=1h
+OnBootSec=30m
+
+[Install]
+WantedBy=timers.target

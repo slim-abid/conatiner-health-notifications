@@ -1,0 +1,6 @@
+[Unit]
+Description=conatiner health check job
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash <absolute-path-to>/monit_docker_check.sh
