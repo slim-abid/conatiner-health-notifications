@@ -15,17 +15,22 @@ do
   fi
 done
 
-#TODO: add logs as attachement to the mail body
-# Warning if any of IoTC containers fail
+# Warning if any of the containers fail
 if [ ${#failed_containers[@]} -ne 0 ];
 then
-    emailSubject="Subject: WARNING: showing exiting containers"
+    emailSubject="Subject: WARNING: showing exited or stopped containers"
     printf "To: ${Recipients}\n" > mail.txt
     echo $emailSubject >> mail.txt
     printf "\nFailing containers are: %s.\n" "${failed_containers[@]}" >> mail.txt
+    for container in "${failed_containers[@]}"
+    do
+      printf "\nLogs for %s are the following:\n" $container >> mail.txt
+      docker ps -a -f "name=$container" --format "{{.Names}}" | xargs docker logs -f --tail 20 |& tee -a mail.txt
+      echo "" >> mail.txt
+    done
     set -x
         sendmail -vt < ./mail.txt
     set +x    
-    [ $? -eq 0 ] && touch /tmp/failing_container_found
+    [ $? -eq 0 ] && touch /tmp/failing_iotc_container_found
 fi
 exit 0
