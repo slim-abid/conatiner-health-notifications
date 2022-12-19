@@ -1,8 +1,8 @@
 #!/bin/bash
-list_of_containers="testt proxy integration api ingress engine rabbitmq fluentd mqtt redis"
+list_of_containers="proxy integration api ingress engine rabbitmq fluentd mqtt redis"
 containers=`docker ps -f status=running --format "{{.Names}}"`
 failed_containers=()
-Recipients="ASASASA"
+Recipients="XXXXXX@ltd"
 [[ -f "/tmp/failing_iotc_container_found" ]] && exit 0 
 
 # Set the options string to "fvh" to specify that the script should recognize the -s, -m, and -h flags
@@ -48,6 +48,14 @@ then
     # Use the values of the flags to determine the behavior of the script
     if [ "$flag_s" -eq 1 ]; then
             # Do something if the -s flag is set
+            # Split the input string into an array of words
+            IFS=' ' read -r -a words <<< "$Recipients"
+            # Concatenate the words into a comma-delimited string
+            for word in "${words[@]}"; do
+                Recipients="$Recipients$word,"
+            done
+            # Remove the trailing comma
+            Recipients=${Recipients%,}
             emailSubject="Subject: WARNING: showing exited or stopped containers"
             printf "To: ${Recipients}\n" > mail.txt
             echo $emailSubject >> mail.txt
@@ -63,6 +71,7 @@ then
             set +x 
     elif [ "$flag_m" -eq 1 ]; then
       # Do something if the -m flag is set
+            source mailgun_config.sh
             for container in "${failed_containers[@]}"
             do
               printf "\nLogs for %s are the following:\n" $container > mail.txt
@@ -70,12 +79,13 @@ then
               echo "" >> mail.txt
             done
             set -x
-                curl -s --user 'api:XXXXXX' \
-                https://api.mailgun.net/v3/AAAAA/messages \
-                -F from='Container health <FFFFF>' \
-                -F to=slimabid10@gmail.com \
+                curl -s --user "api:$YOUR_API_KEY" \
+                https://api.mailgun.net/v3/$(echo -n "$YOUR_DOMAIN_NAME" )/messages \
+                -F from="Container health <$YOUR_SENDER_MAIL>" \
                 -F subject='WARNING: showing exited or stopped containers' \
-                -F text="$(cat mail.txt)"
+                -F text="$(cat mail.txt)" \
+                  $( for Recipient in $Recipients; do echo -nE "-F to=$Recipient "; done )
+
             set +x 
     else
       # Do something if no flags are set
@@ -84,3 +94,4 @@ then
     [ $? -eq 0 ] && touch /tmp/failing_iotc_container_found
 fi
 exit 0
+
