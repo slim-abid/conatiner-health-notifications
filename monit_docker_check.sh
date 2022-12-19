@@ -1,8 +1,8 @@
 #!/bin/bash
-list_of_containers="proxy integration api ingress engine rabbitmq fluentd mqtt redis"
+list_of_containers="testt proxy integration api ingress engine rabbitmq fluentd mqtt redis"
 containers=`docker ps -f status=running --format "{{.Names}}"`
 failed_containers=()
-Recipients="XXXXXX@ltd"
+Recipients="AAAA"
 [[ -f "/tmp/failing_iotc_container_found" ]] && exit 0 
 
 # Set the options string to "fvh" to specify that the script should recognize the -s, -m, and -h flags
@@ -50,9 +50,11 @@ then
             # Do something if the -s flag is set
             # Split the input string into an array of words
             IFS=' ' read -r -a words <<< "$Recipients"
+            Recipients=""
             # Concatenate the words into a comma-delimited string
             for word in "${words[@]}"; do
                 Recipients="$Recipients$word,"
+                echo "$Recipients"
             done
             # Remove the trailing comma
             Recipients=${Recipients%,}
@@ -66,9 +68,12 @@ then
               docker ps -a -f "name=$container" --format "{{.Names}}" | xargs docker logs -f --tail 20 |& tee -a mail.txt
               echo "" >> mail.txt
             done
-            set -x
+            #set -x
                 sendmail -vt < ./mail.txt
-            set +x 
+                if [ "$?" -eq 1 ]; then
+                  echo "Send command failed"; exit 1;
+                fi
+            #set +x 
     elif [ "$flag_m" -eq 1 ]; then
       # Do something if the -m flag is set
             source mailgun_config.sh
@@ -78,7 +83,7 @@ then
               docker ps -a -f "name=$container" --format "{{.Names}}" | xargs docker logs -f --tail 20 |& tee -a mail.txt
               echo "" >> mail.txt
             done
-            set -x
+            #set -x
                 curl -s --user "api:$YOUR_API_KEY" \
                 https://api.mailgun.net/v3/$(echo -n "$YOUR_DOMAIN_NAME" )/messages \
                 -F from="Container health <$YOUR_SENDER_MAIL>" \
@@ -86,7 +91,10 @@ then
                 -F text="$(cat mail.txt)" \
                   $( for Recipient in $Recipients; do echo -nE "-F to=$Recipient "; done )
 
-            set +x 
+                if [ "$?" -eq 1 ]; then
+                  echo "Curl command failed to send mail using Mailgun API"; exit 1;
+                fi
+            #set +x 
     else
       # Do something if no flags are set
       echo "No flags set"
@@ -94,4 +102,3 @@ then
     [ $? -eq 0 ] && touch /tmp/failing_iotc_container_found
 fi
 exit 0
-
