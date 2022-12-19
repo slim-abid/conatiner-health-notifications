@@ -10,4 +10,4 @@ reload systemd:
 systemctl daemon-reload
 
 start the new timer:
-systemctl start test.timer
+systemctl start container.health.timer
